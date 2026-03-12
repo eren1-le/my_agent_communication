@@ -1,0 +1,2 @@
+/home/eren/c++/my_agent_communication/build/CMakeFiles/edit_cache.dir
+/home/eren/c++/my_agent_communication/build/CMakeFiles/rebuild_cache.dir
