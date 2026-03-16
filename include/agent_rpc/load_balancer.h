@@ -2,7 +2,7 @@
  * @Author: eren dengdengd1222@mail.com
  * @Date: 2026-03-16 08:33:13
  * @LastEditors: eren dengdengd1222@mail.com
- * @LastEditTime: 2026-03-16 13:14:11
+ * @LastEditTime: 2026-03-16 20:23:22
  * @FilePath: /my_agent_communication/include/agent_rpc/load_balancer.h
  * @Description: 
  * 
@@ -125,17 +125,60 @@ struct WeightEndPoint {
 // 哈希负载均衡器
 class ConsistentHashLoadBalancer : public LoadBalancer {
 public:
-    ConsistentHashLoadBalancer();
+    ConsistentHashLoadBalancer(int virtual_nodes = 150);
     ~ConsistentHashLoadBalancer() = default;
     
-    
+    ServiceEndpoint selectEndpointByKey(const std::string& key, const std::vector<ServiceEndpoint>& endpoints);
     ServiceEndpoint selectEndpoint(const std::vector<ServiceEndpoint>& endpoints) override;
     void updateEndpoints(const std::vector<ServiceEndpoint>& endpoints) override;
     void markEndpointStatus(const std::string& endpoint_id, bool healthy) override;
     std::string getStrategyName() const override { return "Hash"; }
 
 private:
+    struct HashNode {
+        std::string key;
+        ServiceEndpoint endpoint;
+        uint32_t hash;
+    };
+    void buildHashRing();
+    uint32_t hash(const std::string& key);
+    ServiceEndpoint findEndpoint(uint32_t hash_value);
 
+    int virtual_nodes_;
+    mutable std::mutex ring_mutex_;
+    std::vector<HashNode> hash_ring_;
+    std::map<std::string, ServiceEndpoint> endpoints_;
 
+};
+
+// 最少响应时间负载均衡器
+class LeastResponseTimeLoadBalancer : public LoadBalancer {
+public:
+    LeastResponseTimeLoadBalancer();
+    ~LeastResponseTimeLoadBalancer();
+
+    ServiceEndpoint selectEndpoint(const std::vector<ServiceEndpoint>& endpoints) override;
+    void updateEndpoints(const std::vector<ServiceEndpoint>& endpoints) override;
+    void markEndpointStatus(const std::string& endpoint_id, bool healthy) override;
+    void updateResponseTime(const std::string& endpoint_id, std::chrono::milliseconds response_time);
+    std::string getStrategyName() const override { return "LeastReponseTime"; }
+private:
+    std::chrono::milliseconds calculateAverageResponseTime(const std::string& endpoint_id);
+    struct EndpointStats  {
+        ServiceEndpoint endpoint;
+        std::chrono::milliseconds avg_response_time{0};
+        int response_count{0};
+        std::chrono::steady_clock::time_point last_update;
+        
+    };
+    std::mutex stats_mutex_;
+    std::map<std::string, EndpointStats> endpoints_stats_;
+};
+
+// 负载均衡器工厂
+class LoadBalancerFactory {
+public:
+    static std::unique_ptr<LoadBalancer>  createLoadBalancer(LoadBalanceStategy strategy);
+    static std::vector<std::string> getAvailableStrategies();
 };
 } // namespace agent_rpc

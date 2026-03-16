@@ -2,7 +2,7 @@
  * @Author: eren dengdengd1222@mail.com
  * @Date: 2026-03-16 08:33:39
  * @LastEditors: eren dengdengd1222@mail.com
- * @LastEditTime: 2026-03-16 13:06:29
+ * @LastEditTime: 2026-03-16 20:30:38
  * @FilePath: /my_agent_communication/src/load_balancer.cpp
  * @Description: 
  * 
@@ -243,5 +243,240 @@ void WeightedRoundRobinLoadBalancer::markEndpointStatus(const std::string& endpo
     }
 }
 
+ConsistentHashLoadBalancer::ConsistentHashLoadBalancer(int virtual_nodes) : virtual_nodes_(virtual_nodes) {}
 
+ServiceEndpoint ConsistentHashLoadBalancer::selectEndpoint(const std::vector<ServiceEndpoint>& endpoints) {
+    if (endpoints.empty()) {
+        throw std::runtime_error("No endpoints available");
+    }
+
+    std::lock_guard<std::mutex> locker(ring_mutex_);
+
+    if (hash_ring_.empty()) {
+        throw std::runtime_error("Hash ring is empty");
+    }
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 100000);
+    std::string key = std::to_string(dis(gen));
+
+    uint32_t hash_value = hash(key);
+
+    return findEndpoint(hash_value);
+}
+ServiceEndpoint ConsistentHashLoadBalancer::selectEndpointByKey(const std::string& key,const  std::vector<ServiceEndpoint>& ennpoints) {
+    if (endpoints_.empty()) {
+        throw std::runtime_error("No endpoints available");
+    }
+
+    std::lock_guard<std::mutex> locker(ring_mutex_);
+
+    if (hash_ring_.empty()) {
+        throw std::runtime_error("Hash ring is empty");
+    }
+
+    uint32_t hash_value = hash(key);
+    return findEndpoint(hash_value);
+}
+uint32_t ConsistentHashLoadBalancer::hash(const std::string& key) {
+    //简单hash函数
+    uint32_t hash = 0;
+    for (char c : key) {
+        hash = hash * 31 + c;
+    }
+}
+
+ServiceEndpoint ConsistentHashLoadBalancer::findEndpoint(uint32_t hash_value)
+{
+    if (hash_ring_.empty()) {
+        throw std::runtime_error("Hash ring is empty");
+    }
+
+    auto it = std::lower_bound(hash_ring_.begin(), hash_ring_.end(), hash_value,
+                               [](const HashNode& node, uint32_t value) {
+                                return node.hash < value;
+                               });
+    if (it == hash_ring_.end()) {
+        it = hash_ring_.begin();
+    }
+    return it->endpoint;
+}
+void ConsistentHashLoadBalancer::buildHashRing() {
+    hash_ring_.clear();
+
+    for (const auto& pair : endpoints_) {
+        if (!pair.second.is_healthy) continue;
+
+        //为每个节点创建虚拟节点
+        for (int i = 0; i < virtual_nodes_; ++i) {
+            std::string virtual_key = pair.first + "#" + std::to_string(i);
+            uint32_t hash_value = hash(virtual_key);
+
+            HashNode node;
+
+            node.key = virtual_key;
+            node.endpoint = pair.second;
+            node.hash = hash_value;
+
+            hash_ring_.push_back(node);
+        }
+    }
+
+    // 按哈希值排序
+    std::sort(hash_ring_.begin(), hash_ring_.end(),
+              [](const HashNode& a, const HashNode& b) {
+                    return a.hash < b.hash;
+              });
+}
+
+void ConsistentHashLoadBalancer::updateEndpoints(const std::vector<ServiceEndpoint>& endpoints) {
+    std::lock_guard<std::mutex> locker(ring_mutex_);
+
+    endpoints_.clear();
+
+    for (const auto& endpoint : endpoints) {
+        endpoints_[endpoint.host + ":" + std::to_string(endpoint.port)] = endpoint;
+    }
+
+    buildHashRing();
+
+}
+
+void ConsistentHashLoadBalancer::markEndpointStatus(const std::string& endpoint_id, bool healthy) {
+    std::lock_guard<std::mutex> locker(ring_mutex_);
+
+    auto it = endpoints_.find(endpoint_id);
+    if (it != endpoints_.end()) {
+        it->second.is_healthy = healthy;
+        buildHashRing();
+    }
+}
+//最短响应时间
+LeastResponseTimeLoadBalancer::LeastResponseTimeLoadBalancer() = default;
+
+ServiceEndpoint LeastResponseTimeLoadBalancer::selectEndpoint(const std::vector<ServiceEndpoint>& endpoints) {
+    if (endpoints.empty()) {
+        throw std::runtime_error("No endpoints availabel");
+    }
+
+    std::lock_guard<std::mutex> locker(stats_mutex_);
+    ServiceEndpoint* best_endpoint = nullptr;
+    std::chrono::milliseconds min_response_time = std::chrono::milliseconds::max();
+    for (const auto& endpoint : endpoints) {
+        if (!endpoint.is_healthy) continue;
+
+        std::string endpoint_id = endpoint.host + ":" + std::to_string(endpoint.port);
+
+        auto it = endpoints_stats_.find(endpoint_id);
+
+        if (it != endpoints_stats_.end())  {
+            auto response_time = it->second.avg_response_time;
+            if (response_time < min_response_time) {
+                best_endpoint = const_cast<ServiceEndpoint*>(&endpoint);
+                min_response_time = response_time;
+            }
+        }
+        else {
+            // 新端点,使用默认响应时间
+            if (best_endpoint = nullptr) {
+                best_endpoint = const_cast<ServiceEndpoint*>(&endpoint);
+            }
+        }
+    }
+    if (!best_endpoint) {
+        throw std::runtime_error("No healthy endpoints available");
+    }
+
+    return *best_endpoint;
+}
+
+void LeastResponseTimeLoadBalancer::updateEndpoints(const std::vector<ServiceEndpoint>& endpoints) {
+    std::lock_guard<std::mutex> locker(stats_mutex_);
+    // 清理不存在的端点统计
+    std::set<std::string> current_endpoints;
+    for (const auto& endpoint : endpoints) {
+        current_endpoints.insert(endpoint.host + ":" + std::to_string(endpoint.port));
+    }
+
+    auto it = endpoints_stats_.begin();
+    while (it != endpoints_stats_.end()) {
+        if(current_endpoints.find(it->first) == current_endpoints.end()) {
+            endpoints_stats_.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+void LeastResponseTimeLoadBalancer::markEndpointStatus(const std::string& endpoint_id, bool healthy) {
+    std::lock_guard<std::mutex> locker(stats_mutex_);
+    auto it = endpoints_stats_.find(endpoint_id);
+    if (it != endpoints_stats_.end()) {
+        it->second.endpoint.is_healthy = healthy;
+    }
+}
+void LeastResponseTimeLoadBalancer::updateResponseTime(const std::string& endpoint_id, std::chrono::milliseconds response_time) {
+    std::lock_guard<std::mutex> locker(stats_mutex_);
+    
+    auto stats = endpoints_stats_[endpoint_id];
+    stats.response_count++;
+    stats.last_update = std::chrono::steady_clock::now();
+
+    if (stats.response_count == 1) {
+        stats.avg_response_time = response_time;
+    }
+    else {
+        stats.avg_response_time = std::chrono::milliseconds(static_cast<int>(
+            (stats.avg_response_time.count() * 0.8) + (response_time.count() * 0.2))
+        );
+    }
+    
+}
+
+std::chrono::milliseconds LeastResponseTimeLoadBalancer::calculateAverageResponseTime(const std::string& endpoint_id) {
+    std::lock_guard<std::mutex> locker(stats_mutex_);
+    auto it = endpoints_stats_.find(endpoint_id);
+    if (it == endpoints_stats_.end()) {
+        return std::chrono::milliseconds(1000); // 默认为一秒
+    }
+    return it->second.avg_response_time;
+}
+
+// 负载均衡器工厂
+std::unique_ptr<LoadBalancer> LoadBalancerFactory::createLoadBalancer(LoadBalanceStategy strategy) {
+    switch (strategy)
+    {
+    case LoadBalanceStategy::RANDOM :
+        return std::make_unique<RandomLoadBalancer>();
+        break;
+    case LoadBalanceStategy::ROUND_ROBIN :
+        return std::make_unique<RoundRobinLoadBalancer>();
+        break; 
+    case LoadBalanceStategy::LEAST_CONNECTIONS :
+        return std::make_unique<LeastConnectionsLoadBalancer>();
+        break;
+    case LoadBalanceStategy::WEIGHTED_ROUND_ROBIN :
+        return std::make_unique<WeightedRoundRobinLoadBalancer>();
+        break;
+    case LoadBalanceStategy::CONSISTENT_HASH :
+        return std::make_unique<ConsistentHashLoadBalancer>();
+        break;   
+    case LoadBalanceStategy::LEAST_RESPONSE_TIME :
+        return std::make_unique<LeastResponseTimeLoadBalancer>();
+        break;
+    default:
+        break;
+    }
+}
+
+std::vector<std::string> LoadBalancerFactory::getAvailableStrategies() {
+    return {
+        "RoundRobin",
+        "Random", 
+        "LeastConnections",
+        "WeightedRoundRobin",
+        "ConsistentHash",
+        "LeastResponseTime"
+    };
+}
 } // namespace agent_rpc
