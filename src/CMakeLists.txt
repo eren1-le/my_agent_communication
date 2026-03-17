@@ -2,6 +2,9 @@
 set(SOYRCES
     logger.cpp
     circuit_breaker.cpp
+    load_balaner.cpp
+    rpc_framework.cpp
+    metric.cpp
 )
 
 # 创建静态库
@@ -11,10 +14,12 @@ add_library(agent_rpc_frame STATIC ${SOURCES})
 # 连接依赖
 target_link_libraries(agent_rpc_frame
     pthread
+    proto_lib
 )
 # 指定目标的头文件搜索路径
 target_include_directories(agent_rpc_frame PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../proto
 )
 
 # 安装规则

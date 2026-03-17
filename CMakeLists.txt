@@ -12,3 +12,6 @@ pkg_check_modules(PROTOBUF REQUIRED protobuf)
 set(CMKAE_CXX_FLAG "${CMAKE_CXX_FLAGS} -Wall -Wextra -02")
 
 add_subdirectory(tests)
+
+find_package(CURL REQUIRED)
+find_package(Threads REQUIRED)
