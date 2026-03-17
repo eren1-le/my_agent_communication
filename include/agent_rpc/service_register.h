@@ -117,8 +117,8 @@ private:
 // 内存服务注册中心实现
 class MemoryServiceRegistry : public ServiceRegistry {
 public:
-    MemoryServiceRegister() = default;
-    ~MemoryServiceRegister() = default;
+    MemoryServiceRegistry() = default;
+    ~MemoryServiceRegistry() = default;
 
     // 实现接口的方法
     bool registerService(const ServiceEndpoint& endpoint) override;
