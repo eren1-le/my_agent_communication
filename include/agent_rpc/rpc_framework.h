@@ -2,26 +2,42 @@
  * @Author: eren dengdengd1222@mail.com
  * @Date: 2026-03-14 10:36:25
  * @LastEditors: eren dengdengd1222@mail.com
- * @LastEditTime: 2026-03-18 18:54:11
+ * @LastEditTime: 2026-03-20 11:18:04
  * @FilePath: /my_agent_communication/include/agent_rpc/rpc_framework.h
  * @Description: 
  * 
  */
 #pragma once
-#include <mutex>
+
 #include <memory>
+#include <string>
 #include <vector>
 #include <map>
 #include <functional>
 #include <thread>
+#include <mutex>
 #include <atomic>
+#include <chrono>
+#include <queue>
+#include <condition_variable>
+
+#include <grpcpp/grpcpp.h>
 #include <grpcpp/health_check_service_interface.h>
-#include "logger.h"
-#include "metric.h"
-#include "proto/agent_service.grpc.pb.h"
+#include <grpcpp/ext/proto_server_reflection_plugin.h>
+
+#include "agent_service.pb.h"
+#include "agent_service.grpc.pb.h"
+#include "common.pb.h"
+
 namespace agent_rpc {
 // 前向声明
+
 class Metrics;
+class RpcClient;
+class ServiceRegistry;
+class LoadBalancer;
+class Logger;
+class RpcServer;
 // 配置结构
 struct RpcConfig {
     std::string server_address = "0.0.0.0:50051";
@@ -34,7 +50,7 @@ struct RpcConfig {
     std::string ssl_cert_path;
     std::string ssl_key_path;
     std::string log_level = "INFO";
-    std::string register_address = "localhost:8500";
+    std::string registry_address = "localhost:8500";
 };
 
 //服务信息
@@ -53,6 +69,12 @@ struct ServiceEndpoint {
 template<typename T> 
 class MessageQueue {
 public:
+    MessageQueue() = default;
+    MessageQueue(MessageQueue&& other) {
+        std::lock_guard<std::mutex> lock(other.mutex_);
+        queue_ = std::move(other.queue_); 
+    }
+
     void push(const T& item) {
         std::lock_guard<std::mutex> locker(mutex_);
         queue_.push(item);
@@ -78,7 +100,6 @@ public:
         std::lock_guard<std::mutex> locker(mutex_);
         return queue_.empty();
     }
-
 private:
     mutable std::mutex mutex_;
     std::queue<T> queue_;
@@ -90,6 +111,56 @@ using MessageHandler = std::function<void(const agent_communication::Message &)>
 
 using ErrorHandler = std::function<void(const std::string&, int)>;
 using HealthCheckHandler = std::function<bool()>;
+
+// RPC框架主类
+
+class RpcFramework {
+public:
+    static RpcFramework& getInstance();
+    
+    // 初始化框架
+    bool initialize(const RpcConfig& config);
+    
+    // 启动服务
+    bool startServer();
+    
+    // 停止服务
+    void stopServer();
+    
+    // 获取服务器实例
+    std::shared_ptr<RpcServer> getServer();
+    
+    // 获取客户端实例
+    std::shared_ptr<RpcClient> getClient();
+    
+    // 获取服务注册中心
+    std::shared_ptr<ServiceRegistry> getRegistry();
+    
+    // 获取负载均衡器
+    std::shared_ptr<LoadBalancer> getLoadBalancer();
+    
+    
+    // 配置
+    const RpcConfig& getConfig() const { return config_; }
+    
+    // 是否运行中
+    bool isRunning() const { return running_; }
+
+private:
+    RpcFramework() = default;
+    ~RpcFramework() = default;
+    RpcFramework(const RpcFramework&) = delete;
+    RpcFramework& operator=(const RpcFramework&) = delete;
+
+    RpcConfig config_;
+    std::atomic<bool> running_{false};
+
+    std::shared_ptr<RpcServer> server_;
+    std::shared_ptr<RpcClient> client_;
+    std::shared_ptr<ServiceRegistry> registry_;
+    std::shared_ptr<LoadBalancer> load_balancer_;
+
+};
 } // namespace agent_rpc
 
 

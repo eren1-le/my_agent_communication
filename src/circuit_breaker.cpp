@@ -1,5 +1,5 @@
-#include "circuit_breaker.h"
-
+#include "agent_rpc/circuit_breaker.h"
+#include "agent_rpc/logger.h"
 namespace agent_rpc {
 // CircuitBreaker 实现
     CircuitBreaker::CircuitBreaker(const CircuitBreakerConfig& config) :
@@ -82,7 +82,7 @@ namespace agent_rpc {
     }
     void CircuitBreaker::transitionToClosed() {
         if (state_ != CircuitState::CLOSED) {
-            std::lock_guard<std::mutex> locker(stats_mutex_);
+
             state_ = CircuitState::CLOSED;
             last_state_change_ = std::chrono::steady_clock::now();
             
@@ -94,7 +94,7 @@ namespace agent_rpc {
     }
     void CircuitBreaker::transitionToHalfOpen() {
         if (state_ != CircuitState::HALF_OPRN) {
-            std::lock_guard<std::mutex> locker(stats_mutex_);
+
             state_ = CircuitState::HALF_OPRN;
             last_state_change_ = std::chrono::steady_clock::now();
 
@@ -107,7 +107,7 @@ namespace agent_rpc {
     }
     void CircuitBreaker::transitionToOpen() {
         if (state_ != CircuitState::OPEN) {
-            std::lock_guard<std::mutex> locker(stats_mutex_);
+  
             state_ = CircuitState::OPEN;
             last_state_change_ = std::chrono::steady_clock::now();
             LOG_WARN("Circuit breaker open - service recovered");

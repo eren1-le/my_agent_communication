@@ -2,7 +2,7 @@
  * @Author: eren dengdengd1222@mail.com
  * @Date: 2026-03-18 10:14:16
  * @LastEditors: eren dengdengd1222@mail.com
- * @LastEditTime: 2026-03-18 19:49:28
+ * @LastEditTime: 2026-03-19 16:39:26
  * @FilePath: /my_agent_communication/src/rpc_client.cpp
  * @Description: 
  * 
@@ -11,7 +11,7 @@
 
 #include "agent_rpc/rpc_client.h"
 #include "agent_rpc/logger.h"
-#include "agent_rpc/metric.h"
+#include "agent_rpc/metrics.h"
 #include "grpcpp/grpcpp.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"

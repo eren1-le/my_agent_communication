@@ -1,14 +1,28 @@
-#pragma
+/*
+ * @Author: eren dengdengd1222@mail.com
+ * @Date: 2026-03-18 19:53:18
+ * @LastEditors: eren dengdengd1222@mail.com
+ * @LastEditTime: 2026-03-20 14:29:30
+ * @FilePath: /my_agent_communication/include/agent_rpc/rpc_server.h
+ * @Description: 
+ * 
+ */
+#pragma once
 
 #include "rpc_framework.h"
-#include "proto/agent_service.grpc.pb.h"
+#include "agent_service.grpc.pb.h"
 
 namespace agent_rpc{
 // server
 class AgentCommunicationServiceImpl final : public agent_communication::AgentCommunicationService::Service {
 public:
     AgentCommunicationServiceImpl();
-    ~AgentCommunicationServiceImpl() = default;
+    ~AgentCommunicationServiceImpl() {
+        cleanup_running_ = false;
+        if (cleanup_thread_.joinable()) {
+            cleanup_thread_.join();
+        }
+    }
 
     // 设置消息处理器
     void setMessageHandler(MessageHandler handler);
@@ -97,4 +111,73 @@ private:
     std::atomic<bool> cleanup_running_{false};
     
 };
+
+// 健康检查服务实现
+class HealthServiceImpl final : public agent_communication::HealthService::Service {
+public:
+    HealthServiceImpl();
+    ~HealthServiceImpl() = default;
+
+    void setHealthCheckHandler(HealthCheckHandler handler);
+
+    grpc::Status Check(grpc::ServerContext* context,
+                      const agent_communication::common::HealthCheckRequest* request,
+                      agent_communication::common::HealthCheckResponse* response) override;
+    
+    grpc::Status Watch(grpc::ServerContext* context,
+                      const agent_communication::common::HealthCheckRequest* request,
+                      grpc::ServerWriter<agent_communication::common::HealthCheckResponse>* writer) override;
+   
+private:
+        HealthCheckHandler health_check_handler_;
+};
+
+
+// RPC服务器类
+
+class RpcServer {
+public:
+    RpcServer();
+    ~RpcServer();
+    
+    // 初始化服务器
+    bool initialize(const RpcConfig& config);
+    
+    // 启动服务器
+    bool start();
+    
+    // 停止服务器
+    void stop();
+    
+    // 等待服务器结束
+    void wait();
+    
+    // 获取服务实现
+    std::shared_ptr<AgentCommunicationServiceImpl> getService();
+    
+    // 获取健康检查服务
+    std::shared_ptr<HealthServiceImpl> getHealthService();
+    
+    // 是否运行中
+    bool isRunning() const { return running_; }
+    
+    // 获取服务器地址
+    std::string getAddress() const { return address_; }
+private:
+    void setupServer();
+    void setupSslCredentials();
+
+    RpcConfig config_;
+    std::string address_;
+
+    std::atomic<bool> running_{false};
+
+    std::unique_ptr<grpc::Server> server_;
+    std::shared_ptr<AgentCommunicationServiceImpl> service_impl_;
+    std::shared_ptr<HealthServiceImpl> health_service_impl_;
+
+    std::shared_ptr<grpc::ServerCredentials> server_credentials_;
+    std::vector<std::unique_ptr<grpc::ServerBuilder>> builder_;
+};
+
 } // namespace agent_rpc

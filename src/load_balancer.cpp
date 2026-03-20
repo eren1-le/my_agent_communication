@@ -2,13 +2,18 @@
  * @Author: eren dengdengd1222@mail.com
  * @Date: 2026-03-16 08:33:39
  * @LastEditors: eren dengdengd1222@mail.com
- * @LastEditTime: 2026-03-16 20:30:38
+ * @LastEditTime: 2026-03-20 09:45:20
  * @FilePath: /my_agent_communication/src/load_balancer.cpp
  * @Description: 
  * 
  */
+#include "agent_rpc/rpc_framework.h"
+#include "agent_rpc/rpc_server.h"
+#include "agent_rpc/rpc_client.h"
+#include "agent_rpc/service_registry.h"
 #include "agent_rpc/load_balancer.h"
 #include "agent_rpc/logger.h"
+#include "agent_rpc/metrics.h"
 namespace agent_rpc {
 RoundRobinLoadBalancer::RoundRobinLoadBalancer() = default;
 ServiceEndpoint RoundRobinLoadBalancer::selectEndpoint(const std::vector<ServiceEndpoint>& endpoints) {
@@ -51,6 +56,8 @@ void RoundRobinLoadBalancer::markEndpointStatus(const std::string& endpoint_id, 
 
 //RandomLoadBalancer 实现
 RandomLoadBalancer::RandomLoadBalancer() : gen_(rd_()) {}
+
+RandomLoadBalancer::~RandomLoadBalancer() {}
 
 ServiceEndpoint RandomLoadBalancer::selectEndpoint(const std::vector<ServiceEndpoint>& endpoints) {
     if (endpoints.empty()) {
@@ -354,6 +361,7 @@ void ConsistentHashLoadBalancer::markEndpointStatus(const std::string& endpoint_
 }
 //最短响应时间
 LeastResponseTimeLoadBalancer::LeastResponseTimeLoadBalancer() = default;
+LeastResponseTimeLoadBalancer::~LeastResponseTimeLoadBalancer() = default;
 
 ServiceEndpoint LeastResponseTimeLoadBalancer::selectEndpoint(const std::vector<ServiceEndpoint>& endpoints) {
     if (endpoints.empty()) {
@@ -443,25 +451,25 @@ std::chrono::milliseconds LeastResponseTimeLoadBalancer::calculateAverageRespons
 }
 
 // 负载均衡器工厂
-std::unique_ptr<LoadBalancer> LoadBalancerFactory::createLoadBalancer(LoadBalanceStategy strategy) {
+std::unique_ptr<LoadBalancer> LoadBalancerFactory::createLoadBalancer(LoadBalanceStrategy strategy) {
     switch (strategy)
     {
-    case LoadBalanceStategy::RANDOM :
+    case LoadBalanceStrategy::RANDOM :
         return std::make_unique<RandomLoadBalancer>();
         break;
-    case LoadBalanceStategy::ROUND_ROBIN :
+    case LoadBalanceStrategy::ROUND_ROBIN :
         return std::make_unique<RoundRobinLoadBalancer>();
         break; 
-    case LoadBalanceStategy::LEAST_CONNECTIONS :
+    case LoadBalanceStrategy::LEAST_CONNECTIONS :
         return std::make_unique<LeastConnectionsLoadBalancer>();
         break;
-    case LoadBalanceStategy::WEIGHTED_ROUND_ROBIN :
+    case LoadBalanceStrategy::WEIGHTED_ROUND_ROBIN :
         return std::make_unique<WeightedRoundRobinLoadBalancer>();
         break;
-    case LoadBalanceStategy::CONSISTENT_HASH :
+    case LoadBalanceStrategy::CONSISTENT_HASH :
         return std::make_unique<ConsistentHashLoadBalancer>();
         break;   
-    case LoadBalanceStategy::LEAST_RESPONSE_TIME :
+    case LoadBalanceStrategy::LEAST_RESPONSE_TIME :
         return std::make_unique<LeastResponseTimeLoadBalancer>();
         break;
     default:

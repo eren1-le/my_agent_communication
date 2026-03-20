@@ -2,7 +2,7 @@
  * @Author: eren dengdengd1222@mail.com
  * @Date: 2026-03-16 08:33:13
  * @LastEditors: eren dengdengd1222@mail.com
- * @LastEditTime: 2026-03-16 20:23:22
+ * @LastEditTime: 2026-03-20 09:40:46
  * @FilePath: /my_agent_communication/include/agent_rpc/load_balancer.h
  * @Description: 
  * 
@@ -11,10 +11,9 @@
 #include "rpc_framework.h"
 #include <random>
 #include <algorithm>
-#include <set>
 namespace agent_rpc {
 //负载均衡策略枚举
-enum class LoadBalanceStategy {
+enum class LoadBalanceStrategy {
     ROUND_ROBIN,            // 轮询
     RANDOM,                 // 随机
     WEIGHTED_ROUND_ROBIN,   // 加权轮询
@@ -178,7 +177,7 @@ private:
 // 负载均衡器工厂
 class LoadBalancerFactory {
 public:
-    static std::unique_ptr<LoadBalancer>  createLoadBalancer(LoadBalanceStategy strategy);
+    static std::unique_ptr<LoadBalancer>  createLoadBalancer(LoadBalanceStrategy strategy);
     static std::vector<std::string> getAvailableStrategies();
 };
 } // namespace agent_rpc

@@ -2,7 +2,7 @@
  * @Author: eren dengdengd1222@mail.com
  * @Date: 2026-03-13 10:57:31
  * @LastEditors: eren dengdengd1222@mail.com
- * @LastEditTime: 2026-03-14 09:52:20
+ * @LastEditTime: 2026-03-20 14:12:16
  * @FilePath: /my_agent_communication/src/logger.cpp
  * @Description: 
  * 
@@ -20,7 +20,7 @@ std::string LogFormatter::format(const LogEntry& entry) {
     //替换事件戳
     size_t pos  = result.find("%Y-%m-%d %H:%M:%S.%f");//查找时间戳
     if(pos != std::string::npos) {
-        result.replace(pos, 18, formatTimestamp(entry.timestamp));
+        result.replace(pos, 20, formatTimestamp(entry.timestamp));
     }
     //替换日志级别
     pos = result.find("%l");
@@ -102,7 +102,7 @@ std::string LogFormatter::getColorCode(LogLevel level) {
     }
 }
 std::string LogFormatter::resetColor() {
-    return "\033[0m]";
+    return "\033[0m";
 }
 
 //Console Appender 实现
@@ -307,11 +307,12 @@ void Logger::setLevel(LogLevel level) {
 
 void Logger::addAppender(std::shared_ptr<LogAppender> appender) {
     std::lock_guard<std::mutex> lock(appenders_mutex_);
-    appenders_.push_back(appender);
-
     if (async_logger_) {
         async_logger_->addAppender(appender);
     }
+    else appenders_.push_back(appender);
+
+
 }
 
 
@@ -376,7 +377,7 @@ void Logger::flush() {
     }
 }
 
-void Logger::log(LogLevel level,
+void Logger::logInternal(LogLevel level,
                  const std::string& message,
                  const std::map<std::string, std::string>& fields,
                  const std::string& source_file,

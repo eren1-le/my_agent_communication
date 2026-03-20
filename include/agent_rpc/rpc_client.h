@@ -2,14 +2,14 @@
  * @Author: eren dengdengd1222@mail.com
  * @Date: 2026-03-18 08:30:30
  * @LastEditors: eren dengdengd1222@mail.com
- * @LastEditTime: 2026-03-18 19:35:30
+ * @LastEditTime: 2026-03-20 09:41:56
  * @FilePath: /my_agent_communication/include/agent_rpc/rpc_client.h
  * @Description: 
  * 
  */
 #pragma once
 #include "rpc_framework.h"
-#include "proto/agent_service.grpc.pb.h"
+#include "agent_service.grpc.pb.h"
 
 namespace agent_rpc {
 // RPC客户端
