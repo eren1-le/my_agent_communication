@@ -2,7 +2,7 @@
  * @Author: eren dengdengd1222@mail.com
  * @Date: 2026-03-23 15:23:46
  * @LastEditors: eren dengdengd1222@mail.com
- * @LastEditTime: 2026-03-23 20:05:42
+ * @LastEditTime: 2026-03-25 16:27:41
  * @FilePath: /my_agent_communication/mcp/include/mcp/rag/tool_retriever.h
  * @Description: 
  * 
@@ -14,7 +14,7 @@
 #include "embedding_service.h"
 #include "embedding_cache.h"
 #include "vector_index.h"
-
+#include "mcp/mcp_agent_integration.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -52,11 +52,7 @@ struct RetrievedTool {
 /**
  * @brief 工具信息
  */
-struct ToolInfo {
-    std::string name;                      ///< 工具名称
-    std::string description;               ///< 工具描述
-    std::string input_schema;              ///< 输入参数 JSON Schema
-};
+
 
 /**
  * @brief 工具检索器

@@ -2,13 +2,13 @@
  * @Author: eren dengdengd1222@mail.com
  * @Date: 2026-03-23 14:12:36
  * @LastEditors: eren dengdengd1222@mail.com
- * @LastEditTime: 2026-03-23 15:22:31
+ * @LastEditTime: 2026-03-24 16:07:50
  * @FilePath: /my_agent_communication/mcp/src/rag/vector_index.cpp
  * @Description: 
  * 
  */
 #include "mcp/rag/vector_index.h"
-#include "common/logger.h"
+#include "agent_rpc/common/logger.h"
 
 #include <nlohmann/json.hpp>
 #include <fstream>

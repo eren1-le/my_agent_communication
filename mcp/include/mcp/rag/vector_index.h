@@ -68,6 +68,7 @@ public:
      * @param tool 新的工具信息
      * @return 如果工具存在并被更新返回 true
      */
+    
     bool updateTool(const IndexedTool& tool);
 
     /**

@@ -1,4 +1,4 @@
-#include "include/mcp/rag/embedding_cache.h"
+#include "mcp/rag/embedding_cache.h"
 
 namespace agent_rpc{
 namespace mcp {
@@ -40,7 +40,7 @@ std::optional<std::vector<float>> EmbeddingCache::get(const std::string& text) {
 }
 
 bool EmbeddingCache::isExpired(const CacheEntry& entry) const{
-    if (config_.ttl_seconds) {
+    if (config_.ttl_seconds == 0) {
         return false; // TTL 为0表示用不过期
     }
 
@@ -155,7 +155,7 @@ void EmbeddingCache::evictLRU() {
     auto& back = cache_list_.back();
     last_evicted_key_ = back.first;
     cache_map_.erase(back.first);
-    cache_list_.pop_front();
+    cache_list_.pop_back();
 
     stats_.evictions++;
     stats_.size = cache_list_.size();
