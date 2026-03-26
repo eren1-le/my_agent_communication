@@ -288,7 +288,7 @@ bool MCPAgentIntegration::connectToMCPServer()
         }
 
         // 创建工具管理器
-        tool_manager_ = std::make_shared<MCPToolManager>();
+        tool_manager_ = std::make_shared<MCPToolManager>(mcp_client_);
 
         if (!tool_manager_->initialize()) {
             LOG_ERROR("Failed to initialize MCPToolManager");

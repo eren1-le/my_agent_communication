@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.15)
 
 set(COMMON_SOURCES
     src/logger.cpp
+    src/serializer.cpp
+    src/metrics.cpp
+    src/message_converter.cpp
 )
 
 add_library(agent_rpc_common STATIC ${COMMON_SOURCES})

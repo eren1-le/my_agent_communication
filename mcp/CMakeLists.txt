@@ -7,8 +7,10 @@ set(MCP_SOURCES
     src/rag/tool_retriever.cpp
     src/rag/tool_validator.cpp
     src/rag/vector_index.cpp
+    src/rag/vector_index.cpp
     src/mcp_client.cpp
-    src/mcp_tool_manager.cpp)
+    src/mcp_tool_manager.cpp
+    src/mcp_agent_integration.cpp)
 
 add_library(agent_rpc_mcp STATIC ${MCP_SOURCES})
 

@@ -949,5 +949,9 @@ size_t MCPClient::sseWriteCallback(char* ptr, size_t size, size_t nmemb, void* u
         }
     }
 }
+size_t MCPClient::sseHeaderCallback(char* buffer, size_t size, size_t nitems, void* userdata) {
+    // 可以在这里解析响应头
+    return size * nitems;
+}
 } // namespace mcp
 } // namespace agent_rpc
