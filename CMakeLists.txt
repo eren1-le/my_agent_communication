@@ -23,6 +23,6 @@ add_subdirectory(proto)
 add_subdirectory(common)
 add_subdirectory(mcp)
 add_subdirectory(tests)
-
+add_subdirectory(a2a)
 
 
