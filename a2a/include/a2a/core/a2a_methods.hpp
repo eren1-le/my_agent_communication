@@ -1,3 +1,12 @@
+/*
+ * @Author: eren dengdengd1222@mail.com
+ * @Date: 2026-03-29 11:32:14
+ * @LastEditors: eren dengdengd1222@mail.com
+ * @LastEditTime: 2026-03-31 00:56:09
+ * @FilePath: /my_agent_communication/a2a/include/a2a/core/a2a_methods.hpp
+ * @Description: 
+ * 
+ */
 #pragma once
 
 #include <string>
@@ -9,6 +18,7 @@ namespace a2a {
  */
 
  class A2AMethods{
+public:
     // Message methods
     static constexpr const char* MESSAGE_SEND = "message/send";
     static constexpr const char* MESSAGE_STREAM = "message/stream";
